@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
-set(BUILD_TESTING OFF)
+# set(BUILD_TESTING OFF CACHE BOOL )
 
 project(CMakeTest VERSION 1.0)
 
@@ -13,9 +13,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-find_program(CMAKE_C_COMPILER NAMES arm-none-eabi-gcc HINTS /bin)
-find_program(CMAKE_CXX_COMPILER NAMES arm-none-eabi-g++ HINTS /bin)
-find_program(CMAKE_ASM_COMPILER NAMES arm-none-eabi-gcc HINTS /bin)
+# find_program(CMAKE_C_COMPILER NAMES arm-none-eabi-gcc HINTS /bin)
+# find_program(CMAKE_CXX_COMPILER NAMES arm-none-eabi-g++ HINTS /bin)
+# find_program(CMAKE_ASM_COMPILER NAMES arm-none-eabi-gcc HINTS /bin)
 
 set(CMAKE_EXECUTABLE_SUFFIX_C .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_CXX .elf)
@@ -44,8 +44,8 @@ target_link_libraries(STMprogramTest HydrolibSerialProtocol)
 
 target_include_directories(STMprogramTest PUBLIC include)
 target_include_directories(STMprogramTest PUBLIC drvs/Hydrodrivers)
-target_include_directories(STMprogramTest PUBLIC drvs/CMSIS/Device/ST/STM32F4xx/Include)
-target_include_directories(STMprogramTest PUBLIC drvs/CMSIS/Include)
+target_include_directories(STMprogramTest SYSTEM PUBLIC drvs/CMSIS/Device/ST/STM32F4xx/Include)
+target_include_directories(STMprogramTest SYSTEM PUBLIC drvs/CMSIS/Include)
 
 target_compile_definitions(STMprogramTest PUBLIC STM32F407xx)
 
