@@ -44,8 +44,8 @@ target_link_libraries(STMprogramTest HydrolibSerialProtocol)
 
 target_include_directories(STMprogramTest PUBLIC include)
 target_include_directories(STMprogramTest PUBLIC drvs/Hydrodrivers)
-target_include_directories(STMprogramTest SYSTEM PUBLIC drvs/CMSIS/Device/ST/STM32F4xx/Include)
-target_include_directories(STMprogramTest SYSTEM PUBLIC drvs/CMSIS/Include)
+target_include_directories(STMprogramTest SYSTEM PUBLIC drvs/CMSIS_DEVICE_F4/Include)
+target_include_directories(STMprogramTest SYSTEM PUBLIC drvs/CMSIS_5/CMSIS/Core/Include)
 
 target_compile_definitions(STMprogramTest PUBLIC STM32F407xx)
 
