@@ -36,7 +36,7 @@ add_compile_definitions(STM32F407xx)
 add_subdirectory(libs/Hydrolibs Hydrolibs)
 add_subdirectory(drvs/Hydrodrivers Hydrodrivers)
 
-add_executable(STMprogramTest src/main.cpp startup_stm32f407xx.s src/system_stm32f4xx.c
+add_executable(STMprogramTest src/main.cpp src/startup_stm32f407xx.s src/system_stm32f4xx.c
     src/stm32f4xx_it.c)
 
 target_link_libraries(STMprogramTest Hydrodrivers)
