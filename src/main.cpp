@@ -28,9 +28,17 @@ class TxQueue : public hydrolib::serialProtocol::SerialProtocolHandler::TxQueueI
 public:
     hydrolib_ReturnCode Push(void *buffer, uint32_t length) override
     {
-        (void)buffer;
-        (void)length;
-        return HYDROLIB_RETURN_FAIL;
+        for (uint8_t i = 0; i < length; i++)
+        {
+            hydrv_ReturnCode transmit_result =
+                hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
+            while (transmit_result != HYDRV_OK)
+            {
+                transmit_result =
+                    hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
+            }
+        }
+        return HYDROLIB_RETURN_OK;
     }
 };
 
