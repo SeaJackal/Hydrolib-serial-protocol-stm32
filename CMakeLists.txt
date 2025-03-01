@@ -40,7 +40,7 @@ add_executable(STMprogramTest src/main.cpp src/startup_stm32f407xx.s src/system_
     src/stm32f4xx_it.c)
 
 target_link_libraries(STMprogramTest
-    HydrodriversCommon HydrodriversClock HydrodriversGPIO HydrodriversUART)
+    HydrodriversCommon HydrodriversClock HydrodriversGPIO HydrodriversUART HydrodriversSerialProtocol)
 
 target_link_libraries(STMprogramTest HydrolibSerialProtocol)
 

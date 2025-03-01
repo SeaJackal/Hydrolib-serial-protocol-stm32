@@ -13,11 +13,13 @@ extern "C"
 #include "hydrv_gpio.h"
 #include "hydrv_uart.h"
 
-#include "hydrolib_serial_protocol_pack.hpp"
-
 #ifdef __cplusplus
 }
 #endif
+
+#include "hydrv_serial_protocol.hpp"
+
+#include "hydrolib_serial_protocol_pack.hpp"
 
 #define BUFFER_LENGTH 10
 
@@ -52,28 +54,21 @@ int main(void)
     hydrv_GPIO_InitUART_1_3(GPIOC, HYDRV_GPIO_PIN_11);
     HYDRV_ENABLE_UART_2_5_AND_7_8_CLOCK(USART3);
     // NVIC_EnableIRQ(USART3_IRQn);
-    hydrv_UART_Init(USART3);
 
-    TxQueue tx_queue;
-
-    hydrolib::serialProtocol::SerialProtocolHandler sp_handler(2, tx_queue, const_cast<uint8_t *>(buffer), 10);
-
-    uint8_t byte;
+    hydrv::serialProtocol::SerialProtocolDriver sp_driver(USART3, 2, const_cast<uint8_t *>(buffer), 10);
 
     while (1)
     {
-        if (hydrv_UART_Receive(USART3, &byte) == HYDRV_OK)
+        sp_driver.ReceiveByteCallback();
+        sp_driver.TransmitHandler();
+        sp_driver.ProcessRx();
+        if (buffer[0] == 'a')
         {
-            sp_handler.Receive(&byte, 1);
-            sp_handler.ProcessRx();
-            if (buffer[0] == 'a')
-            {
-                hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
-            }
-            else
-            {
-                hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
-            }
+            hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
+        }
+        else
+        {
+            hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
         }
         // hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
         // hydrv_Clock_Delay(500);
