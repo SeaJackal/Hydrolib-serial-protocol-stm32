@@ -13,6 +13,8 @@ extern "C"
 #include "hydrv_gpio.h"
 #include "hydrv_uart.h"
 
+#include "cmsis_os.h"
+
 #ifdef __cplusplus
 }
 #endif
@@ -25,24 +27,54 @@ extern "C"
 
 volatile uint8_t buffer[10];
 
-class TxQueue : public hydrolib::serialProtocol::SerialProtocolHandler::TxQueueInterface
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+    .name = "defaultTask",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t)osPriorityIdle,
+};
+
+// class TxQueue : public hydrolib::serialProtocol::SerialProtocolHandler::TxQueueInterface
+// {
+// public:
+//     hydrolib_ReturnCode Push(void *buffer, uint32_t length) override
+//     {
+//         for (uint8_t i = 0; i < length; i++)
+//         {
+//             hydrv_ReturnCode transmit_result =
+//                 hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
+//             while (transmit_result != HYDRV_OK)
+//             {
+//                 transmit_result =
+//                     hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
+//             }
+//         }
+//         return HYDROLIB_RETURN_OK;
+//     }
+// };
+
+extern "C"
 {
-public:
-    hydrolib_ReturnCode Push(void *buffer, uint32_t length) override
+    void StartDefaultTask(void *argument)
     {
-        for (uint8_t i = 0; i < length; i++)
+        hydrv::serialProtocol::SerialProtocolDriver *sp_driver =
+            (hydrv::serialProtocol::SerialProtocolDriver *)argument;
+        while (1)
         {
-            hydrv_ReturnCode transmit_result =
-                hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
-            while (transmit_result != HYDRV_OK)
+            sp_driver->ReceiveByteCallback();
+            sp_driver->TransmitHandler();
+            sp_driver->ProcessRx();
+            if (buffer[0] == 'a')
             {
-                transmit_result =
-                    hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
+                hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
+            }
+            else
+            {
+                hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
             }
         }
-        return HYDROLIB_RETURN_OK;
     }
-};
+}
 
 int main(void)
 {
@@ -57,19 +89,15 @@ int main(void)
 
     hydrv::serialProtocol::SerialProtocolDriver sp_driver(USART3, 2, const_cast<uint8_t *>(buffer), 10);
 
+    osKernelInitialize();
+
+    defaultTaskHandle = osThreadNew(StartDefaultTask, &sp_driver, &defaultTask_attributes);
+
+    osKernelStart();
+
     while (1)
     {
-        sp_driver.ReceiveByteCallback();
-        sp_driver.TransmitHandler();
-        sp_driver.ProcessRx();
-        if (buffer[0] == 'a')
-        {
-            hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
-        }
-        else
-        {
-            hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
-        }
+
         // hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
         // hydrv_Clock_Delay(500);
         // hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
