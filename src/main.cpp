@@ -19,20 +19,23 @@ extern "C"
 }
 #endif
 
-#include "hydrv_serial_protocol.hpp"
-
-#include "hydrolib_serial_protocol_pack.hpp"
+#include "hydros_serial_protocol.hpp"
 
 #define BUFFER_LENGTH 10
 
-volatile uint8_t buffer[10];
+uint8_t buffer[10];
 
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-    .name = "defaultTask",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t)osPriorityIdle,
-};
+hydros::serialProtocol::SerialProtocolModule serial_protocol(
+    "SerialProtocol",
+    osPriorityNormal, osPriorityAboveNormal, USART3, 2, buffer, 10);
+
+extern "C"
+{
+    void UART_IT_Handler()
+    {
+        serial_protocol.UARTinterruptHandler();
+    }
+}
 
 // class TxQueue : public hydrolib::serialProtocol::SerialProtocolHandler::TxQueueInterface
 // {
@@ -57,13 +60,10 @@ extern "C"
 {
     void StartDefaultTask(void *argument)
     {
-        hydrv::serialProtocol::SerialProtocolDriver *sp_driver =
-            (hydrv::serialProtocol::SerialProtocolDriver *)argument;
+        (void)argument;
         while (1)
         {
-            sp_driver->ReceiveByteCallback();
-            sp_driver->TransmitHandler();
-            sp_driver->ProcessRx();
+            // osSemaphoreAcquire(rx_completed, osWaitForever);
             if (buffer[0] == 'a')
             {
                 hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
@@ -85,13 +85,21 @@ int main(void)
     hydrv_GPIO_InitUART_1_3(GPIOC, HYDRV_GPIO_PIN_10);
     hydrv_GPIO_InitUART_1_3(GPIOC, HYDRV_GPIO_PIN_11);
     HYDRV_ENABLE_UART_2_5_AND_7_8_CLOCK(USART3);
-    // NVIC_EnableIRQ(USART3_IRQn);
+    NVIC_SetPriorityGrouping(0);
+    NVIC_SetPriority(USART3_IRQn, 7);
+    NVIC_EnableIRQ(USART3_IRQn);
 
-    hydrv::serialProtocol::SerialProtocolDriver sp_driver(USART3, 2, const_cast<uint8_t *>(buffer), 10);
+    hydrv_UART_Init(USART3);
 
     osKernelInitialize();
 
-    defaultTaskHandle = osThreadNew(StartDefaultTask, &sp_driver, &defaultTask_attributes);
+    osThreadAttr_t defaultTask_attributes =
+        {
+            .name = "DefaultThread",
+            .stack_size = 128 * 16,
+            .priority = osPriorityIdle,
+        };
+    osThreadId_t defaultTaskHandle = osThreadNew(StartDefaultTask, nullptr, &defaultTask_attributes);
 
     osKernelStart();
 

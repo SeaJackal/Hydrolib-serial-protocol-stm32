@@ -1,6 +1,3 @@
-[submodule "libs/Hydrolibs"]
-	path = libs/Hydrolibs
-	url = https://github.com/SeaJackal/Hydrolib-soft.git
 [submodule "libs/HydroOS"]
 	path = libs/HydroOS
 	url = https://github.com/SeaJackal/HydroOS.git

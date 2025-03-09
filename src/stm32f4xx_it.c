@@ -20,8 +20,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
 #include "hydrv_clock.h"
+#include "hydrv_uart.h"
+#include "hydrv_gpio.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "stm32f4xx.h"
+#include "stm32f407xx.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -58,6 +62,8 @@
 
 /* External variables --------------------------------------------------------*/
 /* USER CODE BEGIN EV */
+
+extern void UART_IT_Handler();
 
 /* USER CODE END EV */
 
@@ -170,4 +176,9 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */
+}
+
+void USART3_IRQHandler(void)
+{
+  UART_IT_Handler();
 }

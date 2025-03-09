@@ -33,7 +33,7 @@ add_link_options(-specs=nosys.specs -T${CMAKE_CURRENT_SOURCE_DIR}/STM32F407VGTx_
 
 add_compile_definitions(STM32F407xx)
 
-add_subdirectory(libs/Hydrolibs Hydrolibs)
+# add_subdirectory(libs/Hydrolibs Hydrolibs)
 add_subdirectory(libs/HydroOS HydroOS)
 # add_subdirectory(drvs/Hydrodrivers Hydrodrivers)
 
@@ -41,10 +41,10 @@ add_executable(STMprogramTest src/main.cpp src/startup_stm32f407xx.s src/system_
     src/stm32f4xx_it.c)
 
 target_link_libraries(STMprogramTest
-    HydrodriversCommon HydrodriversClock HydrodriversGPIO HydrodriversUART HydrodriversSerialProtocol
-    FreeRTOS)
+    HydrodriversCommon HydrodriversClock HydrodriversGPIO
+    FreeRTOS HydroOSserialProtocol)
 
-target_link_libraries(STMprogramTest HydrolibSerialProtocol)
+target_link_libraries(STMprogramTest HydrolibCommon)
 
 target_include_directories(STMprogramTest PUBLIC include)
 
