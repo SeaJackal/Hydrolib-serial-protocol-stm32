@@ -20,59 +20,76 @@ extern "C"
 #endif
 
 #include "hydros_serial_protocol.hpp"
+#include "hydros_logger.hpp"
 
 #define BUFFER_LENGTH 10
 
 uint8_t buffer[10];
 
-hydros::serialProtocol::SerialProtocolModule serial_protocol(
-    "SerialProtocol",
-    osPriorityNormal, osPriorityAboveNormal, USART3, 2, buffer, 10);
+// hydros::serialProtocol::SerialProtocolModule serial_protocol(
+//     "SerialProtocol",
+//     osPriorityNormal, osPriorityAboveNormal, USART3, 2, buffer, 10);
+
+hydros::logger::LoggerModule logger_module;
+
+hydrolib::Logger::Logger logger("Test logger", &logger_module.GetDistributor());
+hydrolib::Logger::Logger logger2("Test logger2", &logger_module.GetDistributor());
+
+hydros::logger::LoggerModule::UARTloggerStream UART_stream(USART3, osPriorityIdle);
 
 extern "C"
 {
     void UART_IT_Handler()
     {
-        serial_protocol.UARTinterruptHandler();
+        UART_stream.TransmitByte();
+        // serial_protocol.UARTinterruptHandler();
     }
 }
-
-// class TxQueue : public hydrolib::serialProtocol::SerialProtocolHandler::TxQueueInterface
-// {
-// public:
-//     hydrolib_ReturnCode Push(void *buffer, uint32_t length) override
-//     {
-//         for (uint8_t i = 0; i < length; i++)
-//         {
-//             hydrv_ReturnCode transmit_result =
-//                 hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
-//             while (transmit_result != HYDRV_OK)
-//             {
-//                 transmit_result =
-//                     hydrv_UART_Transmit(USART3, static_cast<uint8_t *>(buffer)[i]);
-//             }
-//         }
-//         return HYDROLIB_RETURN_OK;
-//     }
-// };
 
 extern "C"
 {
     void StartDefaultTask(void *argument)
     {
-        (void)argument;
         while (1)
         {
-            // osSemaphoreAcquire(rx_completed, osWaitForever);
-            if (buffer[0] == 'a')
-            {
-                hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
-            }
-            else
-            {
-                hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
-            }
+            logger.WriteLog(hydrolib::Logger::LogLevel::INFO, "Hello!");
+            osDelay(1000);
         }
+        // (void)argument;
+        // while (1)
+        // {
+        //     // osSemaphoreAcquire(rx_completed, osWaitForever);
+        //     if (buffer[0] == 'a')
+        //     {
+        //         hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
+        //     }
+        //     else
+        //     {
+        //         hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
+        //     }
+        // }
+    }
+
+    void StartDefaultTask2(void *argument)
+    {
+        while (1)
+        {
+            logger2.WriteLog(hydrolib::Logger::LogLevel::WARNING, "Hello too!");
+            osDelay(500);
+        }
+        // (void)argument;
+        // while (1)
+        // {
+        //     // osSemaphoreAcquire(rx_completed, osWaitForever);
+        //     if (buffer[0] == 'a')
+        //     {
+        //         hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
+        //     }
+        //     else
+        //     {
+        //         hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
+        //     }
+        // }
     }
 }
 
@@ -97,9 +114,19 @@ int main(void)
         {
             .name = "DefaultThread",
             .stack_size = 128 * 16,
-            .priority = osPriorityIdle,
+            .priority = osPriorityBelowNormal,
         };
     osThreadId_t defaultTaskHandle = osThreadNew(StartDefaultTask, nullptr, &defaultTask_attributes);
+
+    osThreadAttr_t defaultTask2_attributes =
+        {
+            .name = "DefaultThread2",
+            .stack_size = 128 * 16,
+            .priority = osPriorityNormal,
+        };
+    osThreadId_t defaultTask2Handle = osThreadNew(StartDefaultTask2, nullptr, &defaultTask2_attributes);
+
+    logger_module.AddUARTstreams(UART_stream);
 
     osKernelStart();
 

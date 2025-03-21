@@ -42,7 +42,7 @@ add_executable(STMprogramTest src/main.cpp src/startup_stm32f407xx.s src/system_
 
 target_link_libraries(STMprogramTest
     HydrodriversCommon HydrodriversClock HydrodriversGPIO
-    FreeRTOS HydroOSserialProtocol)
+    FreeRTOS HydroOSserialProtocol HydroOSlogger)
 
 target_link_libraries(STMprogramTest HydrolibCommon)
 
