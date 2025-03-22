@@ -28,12 +28,12 @@ uint8_t buffer[10];
 
 // hydros::serialProtocol::SerialProtocolModule serial_protocol(
 //     "SerialProtocol",
-//     osPriorityNormal, osPriorityAboveNormal, USART3, 2, buffer, 10);
+//     osPriorityNormal, USART3, 2, buffer, 10);
 
 hydros::logger::LoggerModule logger_module;
 
-hydrolib::Logger::Logger logger("Test logger", &logger_module.GetDistributor());
-hydrolib::Logger::Logger logger2("Test logger2", &logger_module.GetDistributor());
+hydrolib::Logger::Logger logger("Test logger", &logger_module);
+hydrolib::Logger::Logger logger2("Test logger2", &logger_module);
 
 hydros::logger::LoggerModule::UARTloggerStream UART_stream(USART3, osPriorityIdle);
 
@@ -53,6 +53,14 @@ extern "C"
         while (1)
         {
             logger.WriteLog(hydrolib::Logger::LogLevel::INFO, "Hello!");
+            // if (buffer[0] == 'a')
+            // {
+            //     hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
+            // }
+            // else
+            // {
+            //     hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
+            // }
             osDelay(1000);
         }
         // (void)argument;
@@ -126,7 +134,7 @@ int main(void)
         };
     osThreadId_t defaultTask2Handle = osThreadNew(StartDefaultTask2, nullptr, &defaultTask2_attributes);
 
-    logger_module.AddUARTstreams(UART_stream);
+    logger_module.AddSubscriber(UART_stream, hydrolib::Logger::LogLevel::DEBUG, nullptr);
 
     osKernelStart();
 
