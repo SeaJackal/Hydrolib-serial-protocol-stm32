@@ -5,155 +5,111 @@ extern "C"
 {
 #endif
 
-#include "stm32f4xx.h"
 #include "stm32f407xx.h"
+#include "stm32f4xx.h"
 
-#include "hydrv_common.h"
 #include "hydrv_clock.h"
+#include "hydrv_common.h"
 #include "hydrv_gpio.h"
-#include "hydrv_uart.h"
-
-#include "cmsis_os.h"
 
 #ifdef __cplusplus
 }
 #endif
 
-#include "hydros_serial_protocol.hpp"
-#include "hydros_logger.hpp"
+#include "hydrv_serial_protocol.hpp"
+#include "hydrv_uart.hpp"
 
 #define BUFFER_LENGTH 10
 
-uint8_t buffer[10];
+class Memory : public hydrolib::serialProtocol::MessageProcessor::PublicMemoryInterface
+{
+public:
+  Memory(uint8_t *buffer,
+         uint32_t length) : buffer_(buffer),
+                            length_(length)
+  {
+  }
 
-// hydros::serialProtocol::SerialProtocolModule serial_protocol(
-//     "SerialProtocol",
-//     osPriorityNormal, USART3, 2, buffer, 10);
+public:
+  hydrolib_ReturnCode Read(void *buffer, uint32_t address,
+                           uint32_t length) override
+  {
+    memcpy(buffer, buffer_ + address, length);
+    return HYDROLIB_RETURN_OK;
+  }
 
-hydros::logger::LoggerModule logger_module;
+  hydrolib_ReturnCode Write(const void *buffer, uint32_t address,
+                            uint32_t length) override
+  {
+    memcpy(buffer_ + address, buffer, length);
+    return HYDROLIB_RETURN_OK;
+  }
 
-hydrolib::Logger::Logger logger("Test logger", &logger_module);
-hydrolib::Logger::Logger logger2("Test logger2", &logger_module);
+  uint32_t Size() override
+  {
+    return length_;
+  }
 
-hydros::logger::LoggerModule::UARTloggerStream UART_stream(USART3, osPriorityIdle);
+private:
+  uint8_t *buffer_;
+  uint32_t length_;
+};
+
+uint8_t buffer[BUFFER_LENGTH];
+
+Memory memory(buffer, BUFFER_LENGTH);
+hydrv::serialProtocol::SerialProtocolDriver protocol_handler(2, memory, hydrv::UART::UARTLow::USART3_LOW,
+                                                             GPIOC, HYDRV_GPIO_PIN_11, GPIOC, HYDRV_GPIO_PIN_10, 7);
+
+// hydrv::UART::UART<100, 100> uart(hydrv::UART::UART<100, 100>::HYDRV_USART3,
+//                                  GPIOC, HYDRV_GPIO_PIN_11, GPIOC, HYDRV_GPIO_PIN_10, 7);
 
 extern "C"
 {
-    void UART_IT_Handler()
-    {
-        UART_stream.TransmitByte();
-        // serial_protocol.UARTinterruptHandler();
-    }
-}
+  void UART_IT_Handler()
+  {
 
-extern "C"
-{
-    void StartDefaultTask(void *argument)
-    {
-        while (1)
-        {
-            logger.WriteLog(hydrolib::Logger::LogLevel::INFO, "Hello!");
-            // if (buffer[0] == 'a')
-            // {
-            //     hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
-            // }
-            // else
-            // {
-            //     hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
-            // }
-            osDelay(1000);
-        }
-        // (void)argument;
-        // while (1)
-        // {
-        //     // osSemaphoreAcquire(rx_completed, osWaitForever);
-        //     if (buffer[0] == 'a')
-        //     {
-        //         hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
-        //     }
-        //     else
-        //     {
-        //         hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
-        //     }
-        // }
-    }
-
-    void StartDefaultTask2(void *argument)
-    {
-        while (1)
-        {
-            logger2.WriteLog(hydrolib::Logger::LogLevel::WARNING, "Hello too!");
-            osDelay(500);
-        }
-        // (void)argument;
-        // while (1)
-        // {
-        //     // osSemaphoreAcquire(rx_completed, osWaitForever);
-        //     if (buffer[0] == 'a')
-        //     {
-        //         hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
-        //     }
-        //     else
-        //     {
-        //         hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
-        //     }
-        // }
-    }
+    protocol_handler.IRQHandler();
+  }
 }
 
 int main(void)
 {
-    hydrv_Clock_ConfigureHSI();
-    HYDRV_ENABLE_GPIO_CLOCK(GPIOD);
-    HYDRV_ENABLE_GPIO_CLOCK(GPIOC);
-    hydrv_GPIO_InitOutput(GPIOD, HYDRV_GPIO_PIN_15, false);
-    hydrv_GPIO_InitUART_1_3(GPIOC, HYDRV_GPIO_PIN_10);
-    hydrv_GPIO_InitUART_1_3(GPIOC, HYDRV_GPIO_PIN_11);
-    HYDRV_ENABLE_UART_2_5_AND_7_8_CLOCK(USART3);
-    NVIC_SetPriorityGrouping(0);
-    NVIC_SetPriority(USART3_IRQn, 7);
-    NVIC_EnableIRQ(USART3_IRQn);
+  hydrv_Clock_ConfigureHSI();
+  HYDRV_ENABLE_GPIO_CLOCK(GPIOD);
+  NVIC_SetPriorityGrouping(0);
+  hydrv_GPIO_InitOutput(GPIOD, HYDRV_GPIO_PIN_15, 0);
 
-    hydrv_UART_Init(USART3);
+  while (1)
+  {
 
-    osKernelInitialize();
-
-    osThreadAttr_t defaultTask_attributes =
-        {
-            .name = "DefaultThread",
-            .stack_size = 128 * 16,
-            .priority = osPriorityBelowNormal,
-        };
-    osThreadId_t defaultTaskHandle = osThreadNew(StartDefaultTask, nullptr, &defaultTask_attributes);
-
-    osThreadAttr_t defaultTask2_attributes =
-        {
-            .name = "DefaultThread2",
-            .stack_size = 128 * 16,
-            .priority = osPriorityNormal,
-        };
-    osThreadId_t defaultTask2Handle = osThreadNew(StartDefaultTask2, nullptr, &defaultTask2_attributes);
-
-    logger_module.AddSubscriber(UART_stream, hydrolib::Logger::LogLevel::DEBUG, nullptr);
-
-    osKernelStart();
-
-    while (1)
+    protocol_handler.ProcessRx();
+    if (buffer[0] == 'a')
     {
-
-        // hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
-        // hydrv_Clock_Delay(500);
-        // hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
-        // hydrv_Clock_Delay(500);
+      hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
     }
+    else if (buffer[0] == 'b')
+    {
+      hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
+    }
+
+    // uart.Transmit(buffer, 6);
+
+    // hydrv_Clock_Delay(500);
+
+    // hydrv_GPIO_Set(GPIOD, HYDRV_GPIO_PIN_15);
+    // hydrv_Clock_Delay(500);
+    // hydrv_GPIO_Reset(GPIOD, HYDRV_GPIO_PIN_15);
+    // hydrv_Clock_Delay(500);
+  }
 }
 
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1)
-    {
-    }
+  __disable_irq();
+  while (1)
+  {
+  }
 }
 
 #ifdef USE_FULL_ASSERT
@@ -166,9 +122,10 @@ void Error_Handler(void)
  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-    /* USER CODE BEGIN 6 */
-    /* User can add his own implementation to report the file name and line number,
-       ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-    /* USER CODE END 6 */
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
